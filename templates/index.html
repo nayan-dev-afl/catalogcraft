@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CatalogCraft — Professional Catalog Builder</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-icon">◈</span>
+        <span class="brand-name">CatalogCraft</span>
+        <span class="brand-tagline">Professional Catalog Builder</span>
+      </div>
+      <div class="header-actions">
+        <button class="btn-ghost" id="btn-reset-session">↺ Reset</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs-nav">
+    <div class="tabs-inner">
+      <button class="tab-btn active" data-tab="tab-media"><span class="tab-num">01</span><span class="tab-label">Media &amp; Logo</span></button>
+      <button class="tab-btn" data-tab="tab-templates"><span class="tab-num">02</span><span class="tab-label">Templates</span></button>
+      <button class="tab-btn" data-tab="tab-specs"><span class="tab-num">03</span><span class="tab-label">Catalog Specs</span></button>
+      <button class="tab-btn" data-tab="tab-output"><span class="tab-num">04</span><span class="tab-label">Final Catalog</span></button>
+    </div>
+  </nav>
+
+  <main class="main-content">
+
+    <!-- TAB 1 -->
+    <section id="tab-media" class="tab-panel active">
+      <div class="panel-header">
+        <h2>Media &amp; Brand Logo</h2>
+        <p>Upload product images and position your brand logo across all of them.</p>
+      </div>
+      <div class="two-col-layout">
+        <div class="card">
+          <div class="card-title"><span class="card-icon">🖼</span> Product Images</div>
+          <div class="asset-toggle-bar">
+            <button class="btn-toggle active" id="btn-show-prod-upload">Upload New</button>
+            <button class="btn-toggle" id="btn-use-default-prods">Use Predefined</button>
+          </div>
+          <div class="drop-zone" id="dz-products">
+            <div class="drop-zone-inner">
+              <div class="drop-icon">⊕</div>
+              <p>Drag &amp; drop images here</p><span>or</span>
+              <label class="btn-upload" for="input-products">Browse Files</label>
+              <input type="file" id="input-products" multiple accept="image/*" hidden />
+              <p class="hint">PNG, JPG, WEBP — Multiple allowed</p>
+            </div>
+          </div>
+          <div class="image-grid" id="product-grid"></div>
+          <div class="card-footer" id="product-count-bar" style="display:none">
+            <span id="product-count-label">0 images loaded</span>
+            <button class="btn-danger-sm" id="btn-clear-products">Clear All</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="card-icon">✦</span> Brand Logo</div>
+          <div class="asset-toggle-bar">
+            <button class="btn-toggle active" id="btn-use-default-logo">Predefined Logo</button>
+            <button class="btn-toggle" id="btn-show-logo-upload">Upload Custom</button>
+          </div>
+          <div class="drop-zone" id="dz-logo" style="display:none;">
+            <div class="drop-zone-inner">
+              <div class="drop-icon">⊕</div>
+              <p>Upload your brand logo</p><span>or</span>
+              <label class="btn-upload" for="input-logo">Browse Logo</label>
+              <input type="file" id="input-logo" accept="image/*" hidden />
+              <p class="hint">PNG with transparency recommended</p>
+            </div>
+          </div>
+          <div id="logo-controls" style="display:none">
+            <div class="logo-preview-wrap">
+              <img id="logo-preview-thumb" alt="Logo" />
+              <button class="btn-danger-sm" id="btn-remove-logo">✕ Remove</button>
+            </div>
+            <div class="slider-group"><label>Size: <span id="logo-size-val">20</span>%</label><input type="range" id="logo-size" min="5" max="80" value="20" /></div>
+            <div class="slider-group"><label>Opacity: <span id="logo-opacity-val">100</span>%</label><input type="range" id="logo-opacity" min="10" max="100" value="100" /></div>
+            <div class="position-grid-label">Quick Position</div>
+            <div class="position-grid" id="position-grid">
+              <button data-pos="top-left">↖</button><button data-pos="top-center">↑</button><button data-pos="top-right">↗</button>
+              <button data-pos="mid-left">←</button><button data-pos="center" class="active">⊙</button><button data-pos="mid-right">→</button>
+              <button data-pos="bottom-left">↙</button><button data-pos="bottom-center">↓</button><button data-pos="bottom-right">↘</button>
+            </div>
+          </div>
+          <div class="logo-canvas-area" id="logo-canvas-area" style="display:none">
+            <div class="canvas-label">Preview (drag logo to reposition)</div>
+            <div class="canvas-container" id="canvas-container">
+              <img id="canvas-bg-image" alt="Product Preview" />
+              <img id="canvas-logo" alt="Logo" class="draggable-logo" />
+            </div>
+            <p class="hint" style="margin-top:8px">Drag the logo to set exact position. Applies to all images.</p>
+            <button class="btn-primary" id="btn-apply-logo-all">Apply Logo to All Images →</button>
+          </div>
+        </div>
+      </div>
+      <div class="card mt-2" id="applied-preview-card" style="display:none">
+        <div class="card-title"><span class="card-icon">✓</span> Images with Logo Applied</div>
+        <div class="image-grid" id="applied-grid"></div>
+        <canvas id="offscreen-canvas" style="display:none"></canvas>
+      </div>
+    </section>
+
+    <!-- TAB 2 -->
+    <section id="tab-templates" class="tab-panel">
+      <div class="panel-header">
+        <h2>Template Upload</h2>
+        <p>Use predefined templates or upload custom ones. Template 1 overlays dynamic product specs — text auto-fits the box.</p>
+      </div>
+      <div class="templates-grid">
+        <div class="card template-card" id="tcard-1">
+          <div class="card-title"><span class="card-icon">①</span> Template 1<span class="badge badge-dynamic">Dynamic Text</span></div>
+          <div class="asset-toggle-bar">
+            <button class="btn-toggle active" onclick="useDefaultTemplate(1)">Predefined</button>
+            <button class="btn-toggle" onclick="showTemplateUpload(1)">Upload Custom</button>
+          </div>
+          <div class="drop-zone drop-zone-sm" id="dz-tmpl1" style="display:none;">
+            <div class="drop-zone-inner"><div class="drop-icon">⊕</div><label class="btn-upload" for="input-tmpl1">Upload Template 1</label><input type="file" id="input-tmpl1" accept="image/*" hidden /></div>
+          </div>
+          <div class="tmpl-preview-wrap" id="tmpl1-preview-wrap" style="display:none">
+            <img id="tmpl1-img" alt="Template 1" /><button class="btn-danger-sm tmpl-remove" data-tmpl="1">✕</button>
+          </div>
+          <div class="tmpl1-fields" id="tmpl1-fields">
+            <div class="fields-title">📋 Dynamic Product Details Template</div>
+            <p class="hint">Text auto-wraps and scales down to always fit inside the box — no overflow.</p>
+            <button class="btn-secondary btn-sm" id="btn-preview-tmpl1">👁 Preview with Data</button>
+          </div>
+        </div>
+        <div class="card template-card" id="tcard-2">
+          <div class="card-title"><span class="card-icon">②</span> Template 2</div>
+          <div class="asset-toggle-bar"><button class="btn-toggle active" onclick="useDefaultTemplate(2)">Predefined</button><button class="btn-toggle" onclick="showTemplateUpload(2)">Upload Custom</button></div>
+          <div class="drop-zone drop-zone-sm" id="dz-tmpl2" style="display:none;"><div class="drop-zone-inner"><div class="drop-icon">⊕</div><label class="btn-upload" for="input-tmpl2">Upload Template 2</label><input type="file" id="input-tmpl2" accept="image/*" hidden /></div></div>
+          <div class="tmpl-preview-wrap" id="tmpl2-preview-wrap" style="display:none"><img id="tmpl2-img" alt="Template 2" /><button class="btn-danger-sm tmpl-remove" data-tmpl="2">✕</button></div>
+        </div>
+        <div class="card template-card" id="tcard-3">
+          <div class="card-title"><span class="card-icon">③</span> Template 3</div>
+          <div class="asset-toggle-bar"><button class="btn-toggle active" onclick="useDefaultTemplate(3)">Predefined</button><button class="btn-toggle" onclick="showTemplateUpload(3)">Upload Custom</button></div>
+          <div class="drop-zone drop-zone-sm" id="dz-tmpl3" style="display:none;"><div class="drop-zone-inner"><div class="drop-icon">⊕</div><label class="btn-upload" for="input-tmpl3">Upload Template 3</label><input type="file" id="input-tmpl3" accept="image/*" hidden /></div></div>
+          <div class="tmpl-preview-wrap" id="tmpl3-preview-wrap" style="display:none"><img id="tmpl3-img" alt="Template 3" /><button class="btn-danger-sm tmpl-remove" data-tmpl="3">✕</button></div>
+        </div>
+      </div>
+      <div class="card mt-2" id="tmpl1-full-preview-card" style="display:none">
+        <div class="card-title"><span class="card-icon">👁</span> Template 1 — Live Preview</div>
+        <div id="tmpl1-canvas-container"></div>
+      </div>
+    </section>
+
+    <!-- TAB 3: REDESIGNED -->
+    <section id="tab-specs" class="tab-panel">
+      <div class="panel-header">
+        <h2>Catalog Specs</h2>
+        <p>Upload your Excel file → pick a product from the dropdown → it auto-fills the form and shows a live preview instantly.</p>
+      </div>
+
+      <!-- Step bar -->
+      <div class="steps-bar">
+        <div class="step-item" id="step1-ind"><div class="step-num">1</div><div class="step-lbl">Upload Excel</div></div>
+        <div class="step-arrow">→</div>
+        <div class="step-item" id="step2-ind"><div class="step-num">2</div><div class="step-lbl">Pick Product</div></div>
+        <div class="step-arrow">→</div>
+        <div class="step-item" id="step3-ind"><div class="step-num">3</div><div class="step-lbl">Edit &amp; Save</div></div>
+        <div class="step-arrow">→</div>
+        <div class="step-item" id="step4-ind"><div class="step-num">4</div><div class="step-lbl">Live Preview</div></div>
+      </div>
+
+      <!-- 3-column grid -->
+      <div class="specs-three-col">
+
+        <!-- COL A: Excel + Selector -->
+        <div class="card specs-col-a">
+          <div class="card-title"><span class="card-icon">📊</span> Step 1 — Excel Import</div>
+
+          <div class="drop-zone drop-zone-sm" id="dz-excel">
+            <div class="drop-zone-inner">
+              <div class="drop-icon">⊕</div>
+              <label class="btn-upload" for="input-excel">Upload Excel / CSV</label>
+              <input type="file" id="input-excel" accept=".xlsx,.xls,.csv" hidden />
+              <p class="hint">.xlsx  .xls  .csv</p>
+            </div>
+          </div>
+
+          <div id="excel-status" style="display:none" class="excel-status-card mt-1">
+            <div class="excel-status-inner">
+              <span class="exc-icon">📄</span>
+              <div>
+                <div id="excel-file-name" class="exc-name"></div>
+                <div id="excel-row-count" class="exc-count"></div>
+              </div>
+              <button class="btn-danger-sm" id="btn-clear-excel">✕</button>
+            </div>
+          </div>
+
+          <!-- THE KEY STEP: dropdown -->
+          <div id="item-selector-wrap" style="display:none" class="step2-wrap mt-1">
+            <div class="step2-header">
+              <span class="step2-icon">🎯</span>
+              <span class="step2-label">Step 2 — Pick a Product</span>
+            </div>
+            <div class="select-wrap">
+              <select id="item-name-dropdown">
+                <option value="">— Choose a product —</option>
+              </select>
+            </div>
+            <p class="hint" style="margin-top:6px">Form + preview update automatically ✓</p>
+          </div>
+
+          <!-- Product quick-list from excel -->
+          <div id="excel-product-list-wrap" style="display:none" class="mt-1">
+            <div class="prod-list-title">All Products in Excel</div>
+            <div id="excel-product-list" class="excel-product-list"></div>
+          </div>
+
+          <!-- Column reference -->
+          <details class="col-guide-details mt-1">
+            <summary>📋 Excel Column Names</summary>
+            <div class="col-guide-body">
+              <div class="col-chips">
+                <span class="col-chip req">Category</span>
+                <span class="col-chip req">Product Name</span>
+                <span class="col-chip req">Rate</span>
+                <span class="col-chip">Number of Pieces</span>
+                <span class="col-chip">Product Fabric</span>
+                <span class="col-chip">Product Work</span>
+                <span class="col-chip">Product Length</span>
+                <span class="col-chip">Product Size</span>
+                <span class="col-chip">Product Style</span>
+                <span class="col-chip">Product Pattern</span>
+                <span class="col-chip">Packing Style</span>
+                <span class="col-chip">Sales Package</span>
+                <span class="col-chip">Notes</span>
+                <span class="col-chip">Top Fabric</span>
+                <span class="col-chip">Bottom Fabric</span>
+                <span class="col-chip">Dupatta Fabric</span>
+                <span class="col-chip">Top/Bottom/Dupatta Length</span>
+              </div>
+              <p class="hint" style="margin-top:6px;color:var(--clr-primary)">⚡ <strong>Rate</strong> is for PDF filename only.</p>
+            </div>
+          </details>
+        </div>
+
+        <!-- COL B: Form -->
+        <div class="card specs-col-b">
+          <div class="card-title"><span class="card-icon">✏</span> Step 3 — Product Details</div>
+          <p class="hint" style="margin-bottom:12px">Auto-filled from Excel selection, or enter manually.</p>
+
+          <div class="field-group">
+            <label class="field-label">Category *</label>
+            <div class="select-wrap">
+              <select id="spec-category">
+                <option value="">— Select Category —</option>
+                <option value="SAREE">SAREE</option>
+                <option value="LEHENGA">LEHENGA</option>
+                <option value="SUIT">SUIT</option>
+                <option value="KURTI">KURTI</option>
+                <option value="DRESS MATERIAL">DRESS MATERIAL</option>
+                <option value="DUPATTA">DUPATTA</option>
+                <option value="BED SHEET">BED SHEET</option>
+                <option value="CURTAIN">CURTAIN</option>
+                <option value="GOWN">GOWN</option>
+                <option value="KIDS WEAR">KIDS WEAR</option>
+                <option value="MENS WEAR">MENS WEAR</option>
+                <option value="NIGHTY">NIGHTY</option>
+                <option value="READYMADE BLOUSE">READYMADE BLOUSE</option>
+                <option value="SHIRTING SUITING">SHIRTING SUITING</option>
+                <option value="GIRLS TOP AND BOTTOM">GIRLS TOP AND BOTTOM</option>
+                <option value="OTHER">OTHER</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="spec-form-grid" class="form-grid"></div>
+
+          <input type="hidden" id="spec-product-name" />
+          <input type="hidden" id="spec-pieces" />
+          <input type="hidden" id="spec-length" />
+          <input type="hidden" id="spec-fabric" />
+          <input type="hidden" id="spec-work" />
+          <input type="hidden" id="spec-sales-package" />
+          <input type="hidden" id="spec-packing" />
+          <input type="hidden" id="spec-price" />
+          <input type="hidden" id="spec-notes" />
+
+          <div class="form-actions">
+            <button class="btn-secondary" id="btn-clear-form">↺ Clear</button>
+            <button class="btn-primary" id="btn-save-spec">✓ Save Entry</button>
+          </div>
+
+          <div class="filename-preview-strip" id="filename-preview-strip" style="display:none">
+            <span>📁</span>
+            <span id="filename-preview-val" class="filename-val"></span>
+          </div>
+        </div>
+
+        <!-- COL C: Live Preview -->
+        <div class="card specs-col-c">
+          <div class="card-title">
+            <span class="card-icon">🖼</span> Step 4 — Live Preview
+            <span class="badge badge-live">Auto</span>
+          </div>
+
+          <div id="live-preview-placeholder" class="live-ph">
+            <div class="live-ph-icon">🎨</div>
+            <p>Select a product from the dropdown or fill the form.<br/>Preview appears here instantly.</p>
+            <p class="hint">Requires Template 1 to be loaded.</p>
+          </div>
+
+          <div id="live-preview-spinner" style="display:none" class="live-spin">
+            <div class="spin-ring"></div>
+            <span>Rendering…</span>
+          </div>
+
+          <div id="live-preview-img-wrap" style="display:none">
+            <img id="live-preview-img" src="" alt="Live Preview" class="live-preview-img" />
+            <div id="live-preview-caption" class="live-caption"></div>
+          </div>
+        </div>
+
+      </div><!-- end specs-three-col -->
+
+      <!-- Saved Entries -->
+      <div class="card mt-2" id="saved-entries-card" style="display:none">
+        <div class="card-title">
+          <span class="card-icon">📁</span> Saved Entries
+          <span class="badge badge-count" id="entries-count-badge">0</span>
+          <span style="margin-left:auto;font-size:0.72rem;color:var(--clr-text-muted)">↑ Click Select to reload an entry into the form</span>
+        </div>
+        <div class="table-scroll">
+          <table id="entries-table" class="data-table">
+            <thead>
+              <tr>
+                <th>#</th><th>Category</th><th>Product Name</th>
+                <th>Pieces</th><th>Fabric</th><th>Work/Pattern</th>
+                <th>Rate (₹)</th><th>PDF Filename</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="entries-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4 -->
+    <section id="tab-output" class="tab-panel">
+      <div class="panel-header">
+        <h2>Final HD Catalog</h2>
+        <p>Review all catalog pages and generate your print-ready PDF.</p>
+      </div>
+
+      <div class="output-summary-bar">
+        <div class="summary-item"><span class="summary-num" id="sum-images">0</span><span class="summary-label">Product Images</span></div>
+        <div class="summary-item"><span class="summary-num" id="sum-templates">0</span><span class="summary-label">Templates</span></div>
+        <div class="summary-item"><span class="summary-num" id="sum-entries">0</span><span class="summary-label">Entries</span></div>
+        <button class="btn-primary btn-generate" id="btn-generate-pdf"><span>⬇ Generate &amp; Download PDF</span></button>
+      </div>
+
+      <div id="generation-progress" style="display:none" class="generation-progress">
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+        <p id="progress-label">Preparing pages...</p>
+      </div>
+
+      <div class="output-two-col mt-2">
+        <!-- Page thumbnails -->
+        <div class="catalog-pages-preview" id="catalog-pages-preview">
+          <div class="preview-placeholder">
+            <div class="placeholder-icon">◈</div>
+            <p>Click "Load Preview" to see all pages before generating.</p>
+            <button class="btn-secondary" id="btn-load-preview">Load Preview</button>
+          </div>
+        </div>
+
+        <!-- Entries summary panel -->
+        <div class="card output-entries-panel" id="output-entries-panel" style="display:none">
+          <div class="card-title"><span class="card-icon">📋</span> Selected Entries</div>
+          <div id="output-entries-list" class="output-entries-list"></div>
+          <div class="output-filename-box" id="output-filename-box"></div>
+        </div>
+      </div>
+
+      <div id="pdf-render-area" style="position:fixed;left:-9999px;top:0;width:1816px;"></div>
+    </section>
+
+  </main>
+
+  <div id="toast-container"></div>
+
+  <div class="modal-overlay" id="lightbox-overlay" style="display:none">
+    <div class="lightbox">
+      <button class="lightbox-close" id="lightbox-close">✕</button>
+      <img id="lightbox-img" alt="Preview" />
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="edit-modal-overlay" style="display:none">
+    <div class="modal edit-modal">
+      <div class="modal-header">
+        <h3>Edit Entry</h3>
+        <button class="modal-close" id="edit-modal-close">✕</button>
+      </div>
+      <div class="modal-body" id="edit-modal-body"></div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="edit-modal-cancel">Cancel</button>
+        <button class="btn-primary" id="edit-modal-save">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
